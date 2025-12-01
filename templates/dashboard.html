@@ -1,0 +1,11 @@
+<h2>Welcome {{ name }}</h2>
+<a href="/add">Add Blog</a> | <a href="/logout">Logout</a>
+<hr>
+
+{% for b in blogs %}
+    <h3>{{ b.title }}</h3>
+    <a href="/blog/{{ b.id }}">View</a> |
+    <a href="/edit/{{ b.id }}">Edit</a> |
+    <a href="/delete/{{ b.id }}">Delete</a>
+    <hr>
+{% endfor %}

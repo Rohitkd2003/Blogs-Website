@@ -1,0 +1,366 @@
+⭐ FULL 10-DAYS PLAN — BLOG WEBSITE (Flask + MySQL + JS)
+
+📌 Project Name: FlaskBlogPro
+📌 Backend: Flask
+📌 Database: MySQL Workbench
+📌 Frontend: HTML + JS
+📌 Folder Structure:
+
+FlaskBlogPro/
+│── app.py
+│── db.py
+│── static/
+│     └── script.js
+│── templates/
+      ├── index.html
+      ├── register.html
+      ├── login.html
+      ├── dashboard.html
+      ├── add_blog.html
+      ├── edit_blog.html
+      ├── blog_detail.html
+
+🟦 DAY 1 — Project Setup + Flask + Folder Structure
+🎯 Task:
+
+Flask install
+
+Folder structure तयार करणे
+
+Basic route test
+
+✅ Code — app.py (Day 1)
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Flask Blog Project Started Successfully!"
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
+🟩 DAY 2 — Templates Setup + Home Page
+🎯 Task:
+
+templates folder तयार करणे
+
+Home UI बनवणे
+
+Flask → HTML render करणे
+
+✅ templates/index.html
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Welcome to Flask Blog</h1>
+    <a href="/register">Register</a> |
+    <a href="/login">Login</a>
+</body>
+</html>
+
+✅ app.py Update (Day 2)
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+app.run(debug=True)
+
+🟨 DAY 3 — MySQL Connection + Users Table
+🎯 Task:
+
+MySQL database तयार करणे
+
+Users table तयार करणे
+
+db.py तयार करणे
+
+💾 MySQL Workbench:
+CREATE DATABASE flaskblog;
+USE flaskblog;
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    email VARCHAR(255) UNIQUE,
+    password VARCHAR(255)
+);
+
+✅ db.py
+import mysql.connector
+
+def get_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",   # add password if any
+        database="flaskblog"
+    )
+
+🟧 DAY 4 — User Registration (Insert to DB)
+🎯 Task:
+
+Register form बनवणे
+
+DB insert करणे
+
+Validation JS add करणे
+
+✅ templates/register.html
+<h2>Register</h2>
+
+<form method="POST" onsubmit="return validateRegister()">
+    <input name="name" id="name" placeholder="Full Name"><br><br>
+    <input name="email" id="email" placeholder="Email"><br><br>
+    <input name="password" id="password" placeholder="Password"><br><br>
+    <button type="submit">Register</button>
+</form>
+
+<script src="/static/script.js"></script>
+
+✅ app.py (Register Route)
+from flask import request, redirect
+from db import get_connection
+
+@app.route("/register", methods=["GET","POST"])
+def register():
+    if request.method == "POST":
+        name = request.form["name"]
+        email = request.form["email"]
+        password = request.form["password"]
+
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("INSERT INTO users (name,email,password) VALUES (%s,%s,%s)",
+                  (name, email, password))
+        conn.commit()
+        return redirect("/login")
+
+    return render_template("register.html")
+
+✅ static/script.js (Day 4)
+function validateRegister() {
+    let n = document.getElementById("name").value;
+    let e = document.getElementById("email").value;
+    let p = document.getElementById("password").value;
+
+    if(n=="" || e=="" || p==""){
+        alert("All fields are required!");
+        return false;
+    }
+    return true;
+}
+
+🟥 DAY 5 — Login + Session Management
+🎯 Task:
+
+Login form बनवणे
+
+User authenticate करणे
+
+Session create करणे
+
+✅ templates/login.html
+<h2>Login</h2>
+
+<form method="POST">
+    <input name="email" placeholder="Email"><br><br>
+    <input name="password" placeholder="Password"><br><br>
+    <button type="submit">Login</button>
+</form>
+
+✅ app.py (Login)
+from flask import session
+app.secret_key = "mysecret"
+
+@app.route("/login", methods=["GET","POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+
+        conn = get_connection()
+        c = conn.cursor(dictionary=True)
+        c.execute("SELECT * FROM users WHERE email=%s AND password=%s",
+                  (email, password))
+        user = c.fetchone()
+
+        if user:
+            session["user_id"] = user["id"]
+            session["user_name"] = user["name"]
+            return redirect("/dashboard")
+        else:
+            return "Invalid Credentials!"
+
+    return render_template("login.html")
+
+🟦 DAY 6 — Dashboard Page (User Blogs List)
+🎯 Task:
+
+Dashboard बनवणे
+
+Login झालेल्या user चे blogs fetch करणे
+
+💾 Blogs Table (Day 6)
+CREATE TABLE blogs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    title VARCHAR(255),
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+✅ templates/dashboard.html
+<h2>Welcome {{ name }}</h2>
+<a href="/add">Add Blog</a> | <a href="/logout">Logout</a>
+<hr>
+
+{% for b in blogs %}
+    <h3>{{ b.title }}</h3>
+    <a href="/blog/{{ b.id }}">View</a> |
+    <a href="/edit/{{ b.id }}">Edit</a> |
+    <a href="/delete/{{ b.id }}">Delete</a>
+    <hr>
+{% endfor %}
+
+✅ app.py (Dashboard)
+@app.route("/dashboard")
+def dashboard():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    conn = get_connection()
+    c = conn.cursor(dictionary=True)
+    c.execute("SELECT * FROM blogs WHERE user_id=%s ORDER BY id DESC",
+              (session["user_id"],))
+    blogs = c.fetchall()
+
+    return render_template("dashboard.html", blogs=blogs, name=session["user_name"])
+
+🟩 DAY 7 — Add New Blog
+🎯 Task:
+
+Blog Add form
+
+Insert new blog
+
+✅ templates/add_blog.html
+<h2>Add Blog</h2>
+<form method="POST">
+    <input name="title" placeholder="Blog Title"><br><br>
+    <textarea name="content" placeholder="Write blog here..."></textarea><br><br>
+    <button type="submit">Save Blog</button>
+</form>
+
+✅ app.py (Add Blog)
+@app.route("/add", methods=["GET","POST"])
+def add_blog():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    if request.method == "POST":
+        title = request.form["title"]
+        content = request.form["content"]
+
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("INSERT INTO blogs (user_id,title,content) VALUES (%s,%s,%s)",
+                  (session["user_id"], title, content))
+        conn.commit()
+        return redirect("/dashboard")
+
+    return render_template("add_blog.html")
+
+🟨 DAY 8 — Edit Blog
+🎯 Task:
+
+Existing blog fetch करणे
+
+अपडेट करून DB मध्ये save
+
+✅ templates/edit_blog.html
+<h2>Edit Blog</h2>
+<form method="POST">
+    <input name="title" value="{{ blog.title }}"><br><br>
+    <textarea name="content">{{ blog.content }}</textarea><br><br>
+    <button type="submit">Update</button>
+</form>
+
+✅ app.py
+@app.route("/edit/<int:id>", methods=["GET","POST"])
+def edit_blog(id):
+    conn = get_connection()
+    c = conn.cursor(dictionary=True)
+
+    if request.method == "POST":
+        title = request.form["title"]
+        content = request.form["content"]
+
+        c.execute("UPDATE blogs SET title=%s, content=%s WHERE id=%s",
+                  (title, content, id))
+        conn.commit()
+        return redirect("/dashboard")
+
+    c.execute("SELECT * FROM blogs WHERE id=%s", (id,))
+    blog = c.fetchone()
+    return render_template("edit_blog.html", blog=blog)
+
+🟥 DAY 9 — Delete Blog
+🎯 Task:
+
+delete route तयार करणे
+
+DB मधून remove
+
+✅ app.py
+@app.route("/delete/<int:id>")
+def delete_blog(id):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM blogs WHERE id=%s", (id,))
+    conn.commit()
+    return redirect("/dashboard")
+
+🟪 DAY 10 — Blog Detail Page + Logout + Final Testing
+🎯 Task:
+
+प्रत्येक blog detail page
+
+Logout
+
+Final testing
+
+💾 templates/blog_detail.html
+<h1>{{ blog.title }}</h1>
+<small>By {{ blog.name }}</small>
+<p>{{ blog.content }}</p>
+
+✅ app.py
+@app.route("/blog/<int:id>")
+def blog_detail(id):
+    conn = get_connection()
+    c = conn.cursor(dictionary=True)
+
+    c.execute("""
+        SELECT blogs.*, users.name 
+        FROM blogs INNER JOIN users ON users.id = blogs.user_id
+        WHERE blogs.id=%s
+    """, (id,))
+    blog = c.fetchone()
+
+    return render_template("blog_detail.html", blog=blog)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+🎉 PROJECT COMPLETED!
+
+हे एक full proper teaching plan आहे.
