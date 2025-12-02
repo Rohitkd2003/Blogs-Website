@@ -98,7 +98,7 @@ def get_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",
-        password="",   # add password if any
+        password="",   
         database="flaskblog"
     )
 
@@ -152,7 +152,7 @@ function validateRegister() {
     if(n=="" || e=="" || p==""){
         alert("All fields are required!");
         return false;
-    }
+    } 
     return true;
 }
 
